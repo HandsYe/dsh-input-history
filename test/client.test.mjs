@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 
+const patchSource = readFileSync(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
+
 function createStorage(initial = {}) {
   const values = new Map(Object.entries(initial))
   return {
@@ -50,6 +52,13 @@ function loadBundle(storage = createStorage()) {
   vm.runInNewContext(source, context, { filename: 'lib/client.js' })
   return { exports: exported, context, storage }
 }
+
+test('bundle patch uses the loader patch-list format', () => {
+  assert.match(patchSource, /^- insert:\r?\n/)
+  assert.match(patchSource, /^    - id: input-history$/m)
+  assert.match(patchSource, /^      name: dsh-input-history$/m)
+  assert.doesNotMatch(patchSource, /^plugins:/m)
+})
 
 test('client bundle registers the expected plugin contract', () => {
   const { exports } = loadBundle()
