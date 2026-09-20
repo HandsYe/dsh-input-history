@@ -1,0 +1,3 @@
+plugins:
+  input-history:
+    $if: env.WEBUI
