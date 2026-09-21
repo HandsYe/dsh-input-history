@@ -232,6 +232,32 @@ test('apply installs one capture-phase keydown listener and both bridges', () =>
   assert.deepEqual(listeners.map(({ type, capture }) => [type, capture]), [['keydown', true]])
   assert.equal(typeof cleanup, 'function')
 })
+
+test('the bridge resolves a session input shell through the slot injection', () => {
+  const { exports } = loadBundle()
+  const shell = { snapshot: { draft: '' }, arbitrate: () => 'pass', setDraft: () => undefined }
+  // Mimics the real service shape: sessions.scope(id) -> actx, and the
+  // conversation service reached from that scope yields the input hub.
+  const actx = {
+    get: (name) =>
+      name === 'conversation'
+        ? { input: { for: (scope) => (scope === actx ? shell : undefined) } }
+        : undefined,
+  }
+  const registered = []
+  exports.apply({
+    effect: (factory) => factory(),
+    sessions: { scope: (id) => (id === 'session-1' ? actx : undefined) },
+    slots: {
+      inject: (_name, build) => build(),
+      register: (entry) => registered.push(entry),
+    },
+  })
+
+  assert.equal(registered[0].inject('session-1').shell, shell)
+  assert.equal(registered[0].inject('unknown-session').shell, undefined, 'an unknown session yields no shell')
+  assert.equal(registered[0].inject(undefined).shell, undefined, 'a missing session id is handled')
+})
 //#endregion
 
 //#region history store
