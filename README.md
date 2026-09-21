@@ -57,7 +57,7 @@ Harness 的输入框是 **Lexical 驱动的 `contenteditable`**，不是 `<texta
 ```json
 {
   "dependencies": {
-    "dsh-input-history": "link:D:/path/to/dsh-input-history"
+    "dsh-input-history": "link:/absolute/path/to/dsh-input-history"
   },
   "dsh": {
     "profile": {
@@ -73,8 +73,11 @@ Harness 的输入框是 **Lexical 驱动的 `contenteditable`**，不是 `<texta
 
 ```powershell
 cd "$env:USERPROFILE\.dsh\profiles\desktop"
-node "<DSH install dir>\resources\app\node_modules\pnpm\bin\pnpm.cjs" install
+# 把 <DSH 安装目录> 换成你自己的安装位置
+node "<DSH 安装目录>\resources\app\node_modules\pnpm\bin\pnpm.cjs" install
 ```
+
+桌面端自带的 pnpm 就在安装目录下的 `resources\app\node_modules\pnpm\bin\pnpm.cjs`。
 
 ### 3. 重启 DSH Desktop
 

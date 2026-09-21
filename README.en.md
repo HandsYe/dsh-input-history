@@ -57,7 +57,7 @@ Edit `%USERPROFILE%\.dsh\profiles\<profile>\package.json` in two places:
 ```json
 {
   "dependencies": {
-    "dsh-input-history": "link:D:/path/to/dsh-input-history"
+    "dsh-input-history": "link:/absolute/path/to/dsh-input-history"
   },
   "dsh": {
     "profile": {
@@ -73,8 +73,11 @@ Edit `%USERPROFILE%\.dsh\profiles\<profile>\package.json` in two places:
 
 ```powershell
 cd "$env:USERPROFILE\.dsh\profiles\desktop"
+# replace <DSH install dir> with your own install location
 node "<DSH install dir>\resources\app\node_modules\pnpm\bin\pnpm.cjs" install
 ```
+
+The pnpm bundled with the desktop app lives at `resources\app\node_modules\pnpm\bin\pnpm.cjs` inside your install directory.
 
 ### 3. Restart DSH Desktop
 
