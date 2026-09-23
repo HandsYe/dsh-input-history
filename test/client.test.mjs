@@ -20,6 +20,7 @@ import vm from 'node:vm'
 
 const source = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 const patchSource = readFileSync(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
+const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
 function createStorage(initial = {}) {
   const values = new Map(Object.entries(initial))
@@ -182,6 +183,26 @@ test('bundle patch uses the loader patch-list format', () => {
   assert.match(patchSource, /^    - id: input-history$/m)
   assert.match(patchSource, /^      name: dsh-input-history$/m)
   assert.doesNotMatch(patchSource, /^plugins:/m)
+})
+
+test('the client manifest declares modules, not services, in dsh.client.inject', () => {
+  assert.equal(manifest.exports['./client'], './lib/client.js')
+  assert.equal(manifest.dsh.client.platform, 'web')
+  assert.equal(manifest.dsh.bundle.patch, './cordis.patch.yml')
+
+  const inject = manifest.dsh.client.inject
+  assert.ok(Array.isArray(inject) && inject.length > 0, 'the module graph needs at least one row')
+
+  // `dsh.client.inject` lists PACKAGE names whose bundles must arrive before
+  // this one; the loader looks each up in the module graph and silently skips a
+  // miss. Cordis service injection is a separate field -- the bundle's
+  // `exports.inject` -- so a service name here is a silent no-op rather than an
+  // error, which is exactly why it needs a test. Every client-module row in
+  // this harness is a scoped package.
+  for (const entry of inject) {
+    assert.match(entry, /^@[^/]+\/[^/]+$/, `${entry} must be a scoped package name, not a service name`)
+  }
+  assert.ok(inject.includes('@deepseek-ai/dsh-client-ui-conversation'), 'declares the composer package it mounts into')
 })
 
 test('the bundle declares the services its composer access needs', () => {

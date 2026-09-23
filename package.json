@@ -1,6 +1,6 @@
 {
   "name": "dsh-input-history",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "DeepSeek Harness client plugin that persistently stores sent prompts and recalls them with the up and down arrow keys in the Lexical composer.",
   "license": "MIT",
   "type": "module",
@@ -16,9 +16,9 @@
     },
     "client": {
       "inject": [
-        "slots",
-        "sessions",
-        "conversation"
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-conversation"
       ],
       "platform": "web"
     }
