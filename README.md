@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-29%20passing-brightgreen.svg)](#开发)
+[![Tests](https://img.shields.io/badge/tests-36%20passing-brightgreen.svg)](#开发)
 
 **中文** | [English](README.en.md)
 
@@ -11,10 +11,13 @@
 ## 功能
 
 - 发送过的内容保存到本地存储，重启后仍在
-- 输入框为空时按 `↑` 回溯更早的记录
+- **前缀智能过滤**：输入框中已有内容时按 `↑`，自动仅在以此前缀开头的历史中回溯（类似 Fish / Zsh 终端体验）
+- 输入框为空时按 `↑` 线性全量回溯更早的记录
 - 按 `↓` 回到更新的记录，走到末尾时恢复未被改动的草稿
 - 连续按 `↑` / `↓` 可以一直回溯，不需要每次重新把光标移到开头
 - 手工修改回溯出来的内容后，方向键立即交还给编辑器（不再拦截）
+- **真发送校验**：挂钩 `shell.submit`，清空/剪切放弃的未发送草稿不会被误记入历史
+- **高性能内存缓存**：连续按键零卡顿，并支持跨窗口 `storage` 事件实时同步
 - 自动忽略空白内容；重复内容只保留最新的一条；最多保留 200 条
 - 输入法组合输入期间不拦截按键
 - 不拦截带 `Shift`、`Ctrl`、`Alt`、`Meta` 修饰键的方向键

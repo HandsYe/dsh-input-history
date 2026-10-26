@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-29%20passing-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-36%20passing-brightgreen.svg)](#development)
 
 [中文](README.md) | **English**
 
@@ -11,10 +11,13 @@ Persistent prompt history for the DeepSeek Harness composer. Everything you send
 ## Features
 
 - Sent prompts are stored locally and survive a restart
-- `↑` on an empty composer walks back through earlier entries
+- **Prefix matching**: `↑` when text is typed walks only through entries matching that prefix (like Fish / Zsh shell history)
+- `↑` on an empty composer walks back through all entries linearly
 - `↓` walks forward again and restores an untouched draft at the end
 - Repeated presses keep walking, so you never have to move the caret back to the start
 - Editing a recalled entry hands the arrow keys straight back to the editor
+- **True submit guard**: hooked into `shell.submit`, discarded/cut drafts are never accidentally remembered
+- **In-memory caching**: zero-lag rapid arrow navigation with cross-window `storage` event sync
 - Blank input is ignored, repeats keep only the newest copy, and the list is capped at 200 entries
 - Keys are left alone during IME composition
 - Arrows carrying `Shift`, `Ctrl`, `Alt` or `Meta` are never intercepted

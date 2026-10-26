@@ -108,7 +108,7 @@ function fakeOpenSelection(root, offset) {
  * @param {object} options - stub collaborators.
  * @returns {object} the exports plus what the bundle touched.
  */
-function loadBundle({ storage = createStorage(), selection = null } = {}) {
+function loadBundle({ storage = createStorage(), selection = null, mutationObserver = undefined } = {}) {
   let exported
   const listeners = []
   const context = {
@@ -118,7 +118,7 @@ function loadBundle({ storage = createStorage(), selection = null } = {}) {
       removeEventListener: () => undefined,
     },
     getSelection: () => selection,
-    MutationObserver: undefined,
+    MutationObserver: mutationObserver,
     JSON,
     Object,
     WeakMap,
@@ -318,6 +318,32 @@ test('textOf strips contenteditable artefacts and survives a null root', () => {
   assert.equal(exports.textOf({ textContent: 'plain' }), 'plain')
   assert.equal(exports.textOf({ innerText: 'line\u200b one' }), 'line one')
 })
+
+test('matchesPrefix checks case-insensitively and allows empty prefix', () => {
+  const { exports } = loadBundle()
+  assert.equal(exports.matchesPrefix('git status', 'git'), true)
+  assert.equal(exports.matchesPrefix('Git Status', 'git'), true)
+  assert.equal(exports.matchesPrefix('git status', 'GIT'), true)
+  assert.equal(exports.matchesPrefix('npm install', 'git'), false)
+  assert.equal(exports.matchesPrefix('anything', ''), true)
+  assert.equal(exports.matchesPrefix('anything', undefined), true)
+})
+
+test('readHistory uses in-memory cache for repeated reads', () => {
+  let reads = 0
+  const storage = {
+    getItem() {
+      reads += 1
+      return JSON.stringify(['cached-1'])
+    },
+    setItem() {},
+  }
+  const { exports } = loadBundle({ storage })
+  assert.deepEqual(Array.from(exports.readHistory()), ['cached-1'])
+  assert.equal(reads, 1)
+  assert.deepEqual(Array.from(exports.readHistory()), ['cached-1'])
+  assert.equal(reads, 1)
+})
 //#endregion
 
 //#region navigation decisions
@@ -384,6 +410,41 @@ test('a cursor left past the end is clamped when the history shrinks', () => {
   const cursor = { index: 9, draft: '' }
   assert.equal(installed(exports.planNavigation('ArrowUp', ['only'], cursor, 'draft', true, false)), 'only')
   assert.equal(cursor.index, 0)
+})
+
+test('Arrow Up with prefix walks only matching entries and Arrow Down restores prefix', () => {
+  const { exports } = loadBundle()
+  const history = ['other-1', 'git commit', 'other-2', 'git status']
+  const cursor = liveCursor(history)
+
+  // Start with prefix 'git'
+  assert.equal(installed(exports.planNavigation('ArrowUp', history, cursor, 'git', true, false)), 'git status')
+  assert.equal(cursor.draft, 'git')
+  assert.equal(cursor.prefix, 'git')
+
+  // Next ArrowUp skips 'other-2' and lands on 'git commit'
+  assert.equal(installed(exports.planNavigation('ArrowUp', history, cursor, 'git status', false, true)), 'git commit')
+
+  // Oldest matching entry ends the walk (skips 'other-1')
+  assert.equal(exports.planNavigation('ArrowUp', history, cursor, 'git commit', false, true), null)
+
+  // ArrowDown returns to 'git status'
+  assert.equal(installed(exports.planNavigation('ArrowDown', history, cursor, 'git commit', false, true)), 'git status')
+
+  // Next ArrowDown restores the live draft 'git'
+  assert.equal(installed(exports.planNavigation('ArrowDown', history, cursor, 'git status', false, true)), 'git')
+
+  // Further ArrowDown does nothing
+  assert.equal(exports.planNavigation('ArrowDown', history, cursor, 'git', false, true), null)
+})
+
+test('Arrow Up with case-insensitive prefix matches mixed-case history', () => {
+  const { exports } = loadBundle()
+  const history = ['Docker Run', 'DOCKER build']
+  const cursor = liveCursor(history)
+
+  assert.equal(installed(exports.planNavigation('ArrowUp', history, cursor, 'docker', true, false)), 'DOCKER build')
+  assert.equal(installed(exports.planNavigation('ArrowUp', history, cursor, 'DOCKER build', false, true)), 'Docker Run')
 })
 //#endregion
 
@@ -604,5 +665,76 @@ test('an already-cancelled event is left alone', () => {
   fire(keyEvent('ArrowUp', root, { defaultPrevented: true }))
 
   assert.deepEqual(writes, [])
+})
+
+test('clearing draft without submit does not record history when submit is hookable', () => {
+  let observerCallback
+  class FakeMutationObserver {
+    constructor(cb) {
+      observerCallback = cb
+    }
+    observe() {}
+    disconnect() {}
+  }
+  const storage = createStorage()
+  const root = fakeRoot('discarded draft')
+  let rootListener
+  const shell = {
+    editor: {
+      registerRootListener(fn) {
+        rootListener = fn
+      },
+    },
+    snapshot: { draft: 'discarded draft' },
+    submit() {},
+    setDraft() {},
+  }
+  const bundle = loadBundle({ storage, mutationObserver: FakeMutationObserver })
+  bundle.exports.HistoryBridge({ shell })
+  if (typeof rootListener === 'function') rootListener(root)
+
+  // User clears draft without submit (e.g. Ctrl+A + Backspace)
+  root.textContent = ''
+  root.innerText = ''
+  if (typeof observerCallback === 'function') observerCallback()
+
+  assert.deepEqual(Array.from(bundle.exports.readHistory(storage)), [], 'discarded draft must NOT be recorded')
+})
+
+test('calling shell.submit before clearing draft records history', () => {
+  let observerCallback
+  class FakeMutationObserver {
+    constructor(cb) {
+      observerCallback = cb
+    }
+    observe() {}
+    disconnect() {}
+  }
+  const storage = createStorage()
+  const root = fakeRoot('sent message')
+  let rootListener
+  const shell = {
+    editor: {
+      registerRootListener(fn) {
+        rootListener = fn
+      },
+    },
+    snapshot: { draft: 'sent message' },
+    submit() {},
+    setDraft() {},
+  }
+  const bundle = loadBundle({ storage, mutationObserver: FakeMutationObserver })
+  bundle.exports.HistoryBridge({ shell })
+  if (typeof rootListener === 'function') rootListener(root)
+
+  // User submits
+  shell.submit('queue')
+
+  // Harness clears draft after submission
+  root.textContent = ''
+  root.innerText = ''
+  if (typeof observerCallback === 'function') observerCallback()
+
+  assert.deepEqual(Array.from(bundle.exports.readHistory(storage)), ['sent message'], 'submitted text must be recorded')
 })
 //#endregion
