@@ -737,4 +737,29 @@ test('calling shell.submit before clearing draft records history', () => {
 
   assert.deepEqual(Array.from(bundle.exports.readHistory(storage)), ['sent message'], 'submitted text must be recorded')
 })
+
+test('typing a prefix then Arrow Up at the end of a single-line draft recalls a matching entry', () => {
+  const storage = createStorage()
+  seed(storage, ['unrelated prompt', 'git status', 'another prompt'])
+  const { fire, root, writes } = mountComposer({ storage, caret: 'git'.length, draft: 'git' })
+
+  const event = keyEvent('ArrowUp', root)
+  fire(event)
+
+  assert.deepEqual(writes, ['git status'], 'the matching entry is installed')
+  assert.equal(event.prevented, true, 'the press is consumed so the caret does not move')
+})
+
+test('a multi-line draft keeps Arrow Up for the editor even when a prefix matches', () => {
+  const storage = createStorage()
+  seed(storage, ['git status'])
+  const draft = 'git\nsecond line'
+  const { fire, root, writes } = mountComposer({ storage, caret: draft.length, draft })
+
+  const event = keyEvent('ArrowUp', root)
+  fire(event)
+
+  assert.deepEqual(writes, [], 'multi-line navigation belongs to the editor')
+  assert.equal(event.prevented, false)
+})
 //#endregion

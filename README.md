@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-36%20passing-brightgreen.svg)](#开发)
+[![Tests](https://img.shields.io/badge/tests-38%20passing-brightgreen.svg)](#开发)
 
 **中文** | [English](README.en.md)
 
